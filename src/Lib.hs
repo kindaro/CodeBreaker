@@ -26,6 +26,9 @@ instance (Enum a, Bounded a) => Random a where
     randomR (lo,hi) g = bimap toEnum id $ randomR (fromEnum lo, fromEnum hi) g
     random g = randomR (minBound, maxBound) g
 
+instance (Eq a, Foldable f) => Eq (f a) where
+    (==) x y = (==) (F.toList x) (F.toList y)
+
 data Marble = Red | Orange | Yellow | Green | Blue | Navy | Purple | Pink
     deriving (Read, Show, Eq, Enum, Bounded)
 
