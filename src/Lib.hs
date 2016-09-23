@@ -1,29 +1,51 @@
 {-# LANGUAGE
     FlexibleContexts
+  , FlexibleInstances
+  , UndecidableInstances
+  , OverlappingInstances
+  , ScopedTypeVariables
   , MultiWayIf
   #-}
 
 module Lib where
 
 
-import Data.Maybe
-import Control.Monad.State
+import              Data.Bifunctor
+import qualified    Data.FixedList      as F
+import qualified    Data.Map            as M
+import              Data.Maybe
+import              Data.Numbers.Primes
+import qualified    Data.Set            as S
+import              Control.Monad.State
+import              System.Random
+import              Test.QuickCheck
 
 
-data Marble = Red | Orange | Yellow | Green | Blue | Navy | Purple | Pink deriving (Read, Show, Eq)
+instance (Enum a, Bounded a) => Random a where
+    randomR (lo,hi) g = bimap toEnum id $ randomR (fromEnum lo, fromEnum hi) g
+    random g = randomR (minBound, maxBound) g
+
+data Marble = Red | Orange | Yellow | Green | Blue | Navy | Purple | Pink
+    deriving (Read, Show, Eq, Enum, Bounded)
+
+type Code = F.FixedList5 Marble
+
 type Bucket x = (x, Integer)
 
 
-sortByBuckets (x:xs) = flip runState [] $ foldl op (ini x) xs
+genCode :: IO Code
+genCode = fmap (F.fromFoldable' . take 5) $ generate $ shuffle [(minBound :: Marble) .. maxBound]
+
+sortByBuckets eq (x:xs) = snd $ flip runState [] $ foldl op (ini x) xs
     where
 
         ini x = put ((x,1):[])
 
-        op :: (Eq x, MonadState [Bucket x] m) => m () -> x -> m ()
+        -- op :: (Eq x, MonadState [Bucket x] m) => m () -> x -> m ()
         op m x = m >> do
             state <- get
             let keys = map fst state
-            let key = listToMaybe $ filter (x ==) keys
+            let key = listToMaybe $ filter (x `eq`) keys
             case key of
                 Nothing     -> put $ (x, 1 :: Integer) : state
                 Just key'   -> put $ applyToKey state key' increment
@@ -31,10 +53,46 @@ sortByBuckets (x:xs) = flip runState [] $ foldl op (ini x) xs
 
             where
                 increment = (+1)
-                applyToKey :: (Eq x) => [(x,y)] -> x -> (y -> y) -> [(x,y)]
+                -- applyToKey :: (Eq x) => [(x,y)] -> x -> (y -> y) -> [(x,y)]
                 applyToKey [] _ _ = []
                 applyToKey ((x,y) : whatever) key function =
-                    if x == key
+                    if x `eq` key
                     then (x, function y) : applyToKey whatever key function
                     else (x, y) : applyToKey whatever key function
+
+newtype P = P (Integer, Integer) deriving Show
+instance Monoid P where
+    mempty = P(1,1)
+    mappend (P(x1, y1)) (P(x2, y2)) = P ((x1 * x2), (y1 * y2))
+
+distributeP :: [a] -> Integer -> [(a, P)]
+distributeP list p = map (\x -> (x, P (p, (fromIntegral . F.length) list))) list
+
+simplify :: P -> P
+simplify (P(xs,ys)) = undefined
+    where
+        keys = map fst
+        common xs ys = S.elems $ (S.fromList xs) `S.intersection` (S.fromList ys)
+        commonKeys xs ys = common (keys xs) (keys ys)
+
+s1 =    [ [ Red, Orange, Yellow, Green, Blue ]
+        , [ Red, Yellow, Navy, Purple, Pink ]
+        , [ Green, Blue, Navy, Purple, Pink ]
+        , [ Red, Blue, Navy, Purple, Pink ]
+        , [ Orange, Blue, Navy, Purple, Pink ]
+        , [ Red, Green, Navy, Purple, Pink ]
+        , [ Pink, Red, Blue, Green, Purple ]
+        ]
+
+s1' = concat $ map (uncurry distributeP) $ zip s1 [3,3,4,4,3,4,4]
+
+s1_no = concat . map (uncurry distributeP) $
+    [ ([ Red, Orange, Yellow, Green, Blue ], 3)
+    , ([ Red, Yellow, Navy, Purple, Pink ], 3)
+    , ([ Green, Blue, Navy, Purple, Pink ], 4)
+    , ([ Red, Blue, Navy, Purple, Pink ], 4)
+    , ([ Orange, Blue, Navy, Purple, Pink ], 3)
+    , ([ Red, Green, Navy, Purple, Pink ], 4)
+    , ([ Pink, Red, Blue, Green, Purple ], 4)
+    ]
 
