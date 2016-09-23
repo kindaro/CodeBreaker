@@ -11,7 +11,8 @@ module Lib where
 
 
 import              Data.Bifunctor
-import qualified    Data.FixedList      as F
+import qualified    Data.FixedList      as FL
+import qualified    Data.Foldable       as F
 import qualified    Data.Map            as M
 import              Data.Maybe
 import              Data.Numbers.Primes
@@ -28,13 +29,13 @@ instance (Enum a, Bounded a) => Random a where
 data Marble = Red | Orange | Yellow | Green | Blue | Navy | Purple | Pink
     deriving (Read, Show, Eq, Enum, Bounded)
 
-type Code = F.FixedList5 Marble
+type Code = FL.FixedList5 Marble
 
 type Bucket x = (x, Integer)
 
 
 genCode :: IO Code
-genCode = fmap (F.fromFoldable' . take 5) $ generate $ shuffle [(minBound :: Marble) .. maxBound]
+genCode = fmap (FL.fromFoldable' . take 5) $ generate $ shuffle [(minBound :: Marble) .. maxBound]
 
 sortByBuckets eq (x:xs) = snd $ flip runState [] $ foldl op (ini x) xs
     where
@@ -66,7 +67,7 @@ instance Monoid P where
     mappend (P(x1, y1)) (P(x2, y2)) = P ((x1 * x2), (y1 * y2))
 
 distributeP :: [a] -> Integer -> [(a, P)]
-distributeP list p = map (\x -> (x, P (p, (fromIntegral . F.length) list))) list
+distributeP list p = map (\x -> (x, P (p, (fromIntegral . FL.length) list))) list
 
 simplify :: P -> P
 simplify (P(xs,ys)) = undefined
