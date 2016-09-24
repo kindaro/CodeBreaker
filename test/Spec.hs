@@ -24,18 +24,9 @@ instance Arbitrary Marble where
 
 main :: IO ()
 main = do
-    quickCheck prop_compareBucketize
     C.defaultMain [
         bgroup "buckets"
             [ bench "bucketize 10" $ nfIO $ fmap bucketize $ marbles 10
-            , bench "bucketize_State 10" $ nfIO $ fmap (bucketize_State (==)) $ marbles 10
             , bench "bucketize 1024" $ nfIO $ fmap bucketize $ marbles 1024
-            , bench "bucketize_State 1024" $ nfIO $ fmap (bucketize_State (==)) $ marbles 1024
             ]
         ]
-
-prop_compareBucketize = forAll (vector 10 :: Gen [Marble]) $
-    \x -> (val_bucketize x) == (val_bucketize_State x)
-    where
-        val_bucketize = L.sort . ((\(Buckets x) -> M.toList x) . bucketize)
-        val_bucketize_State = L.sort . (bucketize_State (==))
