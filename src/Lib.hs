@@ -43,6 +43,8 @@ instance (Ord a) => Monoid (Buckets a) where
     mempty = Buckets $ M.empty
     mappend (Buckets x) (Buckets y) = Buckets $ M.unionWith (+) x y
 
+marbles :: Int -> IO [Marble]
+marbles n = sequence $ take n $ repeat (randomIO :: IO Marble)
 
 genCode :: IO Code
 genCode = fmap (FL.fromFoldable' . take 5) $ generate $ shuffle [(minBound :: Marble) .. maxBound]
@@ -50,7 +52,7 @@ genCode = fmap (FL.fromFoldable' . take 5) $ generate $ shuffle [(minBound :: Ma
 bucketize :: (Foldable f, Eq a, Ord a) => f a -> Buckets a
 bucketize fa = foldMap (\x -> Buckets $ M.singleton x 1) fa
 
-sortByBuckets eq (x:xs) = snd $ flip runState [] $ foldl op (ini x) xs
+bucketize_State eq (x:xs) = snd $ flip runState [] $ foldl op (ini x) xs
     where
 
         ini x = put ((x,1):[])
