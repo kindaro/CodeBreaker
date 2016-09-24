@@ -5,11 +5,15 @@
   , OverlappingInstances
   , ScopedTypeVariables
   , MultiWayIf
+  , DeriveGeneric
+  , DeriveAnyClass
   #-}
 
 module Lib where
 
 
+import              Control.DeepSeq
+import              Control.Monad.State
 import              Data.Bifunctor
 import qualified    Data.FixedList      as FL
 import qualified    Data.Foldable       as F
@@ -17,7 +21,7 @@ import qualified    Data.Map            as M
 import              Data.Maybe
 import              Data.Numbers.Primes
 import qualified    Data.Set            as S
-import              Control.Monad.State
+import qualified    GHC.Generics        as G
 import              System.Random
 import              Test.QuickCheck
 
@@ -26,19 +30,29 @@ instance (Enum a, Bounded a) => Random a where
     randomR (lo,hi) g = bimap toEnum id $ randomR (fromEnum lo, fromEnum hi) g
     random g = randomR (minBound, maxBound) g
 
-instance (Eq a, Foldable f) => Eq (f a) where
+instance (Foldable f, Eq a) => Eq (f a) where
     (==) x y = (==) (F.toList x) (F.toList y)
 
+
 data Marble = Red | Orange | Yellow | Green | Blue | Navy | Purple | Pink
-    deriving (Read, Show, Eq, Enum, Bounded)
+    deriving (Read, Show, Eq, Ord, Enum, Bounded, G.Generic, NFData)
 
 type Code = FL.FixedList5 Marble
 
 type Bucket x = (x, Integer)
 
+newtype Buckets a = Buckets (M.Map a Integer) deriving (Show, G.Generic, NFData)
+
+instance (Ord a) => Monoid (Buckets a) where
+    mempty = Buckets $ M.empty
+    mappend (Buckets x) (Buckets y) = Buckets $ M.unionWith (+) x y
+
 
 genCode :: IO Code
 genCode = fmap (FL.fromFoldable' . take 5) $ generate $ shuffle [(minBound :: Marble) .. maxBound]
+
+bucketize :: (Foldable f, Eq a, Ord a) => f a -> Buckets a
+bucketize fa = foldMap (\x -> Buckets $ M.singleton x 1) fa
 
 sortByBuckets eq (x:xs) = snd $ flip runState [] $ foldl op (ini x) xs
     where
