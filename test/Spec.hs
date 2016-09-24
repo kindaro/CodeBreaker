@@ -1,9 +1,21 @@
+{-# LANGUAGE
+    DeriveGeneric
+  , DeriveAnyClass
+  , FlexibleInstances
+  #-}
 
-import Test.QuickCheck
+import Control.DeepSeq
 import Criterion.Main
-import Lib
+import GHC.Generics
 import System.Random
+import Test.QuickCheck
 
+import Lib
+
+instance Generic Marble
+instance Generic (Buckets a)
+instance NFData Marble where rnf = flip seq ()
+instance (NFData a) => NFData (Buckets a) where rnf = flip seq ()
 
 main :: IO ()
 main = defaultMain [
@@ -16,5 +28,7 @@ main = defaultMain [
         , bench "sortByBuckets 1024" $ nfIO $ fmap (sortByBuckets (==)) $ marbles 1024
         ]
     ]
+
+
 
 marbles n = sequence $ take n $ repeat (randomIO :: IO Marble)

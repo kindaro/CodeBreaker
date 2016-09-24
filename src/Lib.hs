@@ -5,14 +5,11 @@
   , OverlappingInstances
   , ScopedTypeVariables
   , MultiWayIf
-  , DeriveGeneric
-  , DeriveAnyClass
   #-}
 
 module Lib where
 
 
-import              Control.DeepSeq
 import              Control.Monad.State
 import              Data.Bifunctor
 import qualified    Data.FixedList      as FL
@@ -21,7 +18,6 @@ import qualified    Data.Map            as M
 import              Data.Maybe
 import              Data.Numbers.Primes
 import qualified    Data.Set            as S
-import qualified    GHC.Generics        as G
 import              System.Random
 import              Test.QuickCheck
 
@@ -35,13 +31,13 @@ instance (Foldable f, Eq a) => Eq (f a) where
 
 
 data Marble = Red | Orange | Yellow | Green | Blue | Navy | Purple | Pink
-    deriving (Read, Show, Eq, Ord, Enum, Bounded, G.Generic, NFData)
+    deriving (Read, Show, Eq, Ord, Enum, Bounded)
 
 type Code = FL.FixedList5 Marble
 
 type Bucket x = (x, Integer)
 
-newtype Buckets a = Buckets (M.Map a Integer) deriving (Show, G.Generic, NFData)
+newtype Buckets a = Buckets (M.Map a Integer) deriving Show
 
 instance (Ord a) => Monoid (Buckets a) where
     mempty = Buckets $ M.empty
